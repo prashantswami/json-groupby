@@ -1,24 +1,29 @@
 'use strict';
-var propertyAt = require('./property-value.js')
+var propertyAt = require('./property-value.js');
 
-function groupBy(items, properties, collect) {
+function groupBy(items, properties, collect, asArray = false) {
   // TODO argument validation
-  if (arguments.length < 2) return arr;
+  if (arguments.length < 2) return items;
   var groups = _groupBy(items, properties);
   // collect other properties values in array
   if (collect && collect.length > 0)
     groups = collectProperties(groups, collect);
+
+  // Convert groups to array if asArray is true
+  if (asArray) {
+    groups = convertToArray(groups);
+  }
 
   return groups;
 }
 
 function _groupBy(items, properties) {
   var group = {};
- 	if (typeof properties[0] === 'string') {
- 	  group = groupByCategory(items, properties[0]);
- 	} else {
- 	  group = groupByRange(items, properties[0]);
- 	}
+  if (typeof properties[0] === 'string') {
+    group = groupByCategory(items, properties[0]);
+  } else {
+    group = groupByRange(items, properties[0]);
+  }
   properties = properties.slice(1);
   if (properties.length > 0) {
     for (var key in group) {
@@ -31,12 +36,12 @@ function _groupBy(items, properties) {
 function groupByCategory(arr, prop) {
   return arr.reduce(function(group, item) {
     var tags = propertyAt(item, prop);
-    tags.forEach(function(tag) { 
+    tags.forEach(function(tag) {
       group[tag] = group[tag] || [];
       group[tag].push(item);
     });
     return group;
-  },{});
+  }, {});
 }
 
 function groupByRange(arr, lookup) {
@@ -44,31 +49,41 @@ function groupByRange(arr, lookup) {
     var val, ind, tag;
     val = propertyAt(f, lookup.property);
     ind = locationOf(val, lookup.intervals);
-    if (ind === lookup.intervals.length -1) ind--;
+    if (ind === lookup.intervals.length - 1) ind--;
     tag = lookup.labels ? lookup.labels[ind] : ind;
     group[tag] = group[tag] || [];
     group[tag].push(f);
     return group;
-  },{});
+  }, {});
 }
 
-// collect the properties in an array 
-function collectProperties(groups, properties) { 
+// collect the properties in an array
+function collectProperties(groups, properties) {
   var collection = {};
   for (var key in groups) {
     if (Array.isArray(groups[key])) {
       collection[key] = groups[key].reduce(function(coll, item) {
-        properties.forEach(function(prop) { 
+        properties.forEach(function(prop) {
           if (!coll[prop]) coll[prop] = [];
-          coll[prop] = coll[prop].concat(propertyAt(item,prop));
-        })
+          coll[prop] = coll[prop].concat(propertyAt(item, prop));
+        });
         return coll;
-      }, {})
+      }, {});
     } else {
       collection[key] = collectProperties(groups[key], properties);
     }
   }
   return collection;
+}
+
+// Convert grouped object to array
+function convertToArray(groups) {
+  return Object.keys(groups).map(key => {
+    return {
+      key: key,
+      values: Array.isArray(groups[key]) ? groups[key] : convertToArray(groups[key])
+    };
+  });
 }
 
 // similar to Array.findIndex but more efficient
@@ -77,11 +92,12 @@ function locationOf(element, array, start, end) {
   start = start || 0;
   end = end || array.length;
   var pivot = parseInt(start + (end - start) / 2, 10);
-  if (end-start <= 1 || array[pivot] === element) return pivot;
+  if (end - start <= 1 || array[pivot] === element) return pivot;
   if (array[pivot] < element) {
     return locationOf(element, array, pivot, end);
   } else {
     return locationOf(element, array, start, pivot);
   }
 }
+
 module.exports = groupBy;
