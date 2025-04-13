@@ -1,13 +1,15 @@
 'use strict';
-var propertyAt = require('./property-value.js');
+const propertyAt = require('./property-value.js');
 
 function groupBy(items, properties, collect, asArray = false) {
   // TODO argument validation
   if (arguments.length < 2) return items;
-  var groups = _groupBy(items, properties);
-  // collect other properties values in array
-  if (collect && collect.length > 0)
+  let groups = _groupBy(items, properties);
+
+  // Collect other properties' values in an array
+  if (collect && collect.length > 0) {
     groups = collectProperties(groups, collect);
+  }
 
   // Convert groups to array if asArray is true
   if (asArray) {
@@ -18,15 +20,20 @@ function groupBy(items, properties, collect, asArray = false) {
 }
 
 function _groupBy(items, properties) {
-  var group = {};
+  if (properties.length === 0) {
+    return items; // Return the original items if no properties are provided
+  }
+
+  let group = {};
   if (typeof properties[0] === 'string') {
     group = groupByCategory(items, properties[0]);
   } else {
     group = groupByRange(items, properties[0]);
   }
+
   properties = properties.slice(1);
   if (properties.length > 0) {
-    for (var key in group) {
+    for (const key in group) {
       group[key] = _groupBy(group[key], properties);
     }
   }
@@ -34,9 +41,9 @@ function _groupBy(items, properties) {
 }
 
 function groupByCategory(arr, prop) {
-  return arr.reduce(function(group, item) {
-    var tags = propertyAt(item, prop);
-    tags.forEach(function(tag) {
+  return arr.reduce((group, item) => {
+    const tags = propertyAt(item, prop);
+    tags.forEach(tag => {
       group[tag] = group[tag] || [];
       group[tag].push(item);
     });
@@ -45,25 +52,28 @@ function groupByCategory(arr, prop) {
 }
 
 function groupByRange(arr, lookup) {
-  return arr.reduce(function(group, f) {
-    var val, ind, tag;
-    val = propertyAt(f, lookup.property);
-    ind = locationOf(val, lookup.intervals);
+  if (!lookup.intervals || lookup.intervals.length === 0) {
+    return {}; // Return an empty object if intervals are not provided
+  }
+
+  return arr.reduce((group, item) => {
+    const val = propertyAt(item, lookup.property);
+    let ind = locationOf(val, lookup.intervals);
     if (ind === lookup.intervals.length - 1) ind--;
-    tag = lookup.labels ? lookup.labels[ind] : ind;
+    const tag = lookup.labels ? lookup.labels[ind] : ind;
     group[tag] = group[tag] || [];
-    group[tag].push(f);
+    group[tag].push(item);
     return group;
   }, {});
 }
 
-// collect the properties in an array
+// Collect the properties in an array
 function collectProperties(groups, properties) {
-  var collection = {};
-  for (var key in groups) {
+  const collection = {};
+  for (const key in groups) {
     if (Array.isArray(groups[key])) {
-      collection[key] = groups[key].reduce(function(coll, item) {
-        properties.forEach(function(prop) {
+      collection[key] = groups[key].reduce((coll, item) => {
+        properties.forEach(prop => {
           if (!coll[prop]) coll[prop] = [];
           coll[prop] = coll[prop].concat(propertyAt(item, prop));
         });
@@ -78,20 +88,21 @@ function collectProperties(groups, properties) {
 
 // Convert grouped object to array
 function convertToArray(groups) {
-  return Object.keys(groups).map(key => {
-    return {
-      key: key,
-      values: Array.isArray(groups[key]) ? groups[key] : convertToArray(groups[key])
-    };
-  });
+  return Object.keys(groups).map(key => ({
+    key: key,
+    values: Array.isArray(groups[key])
+      ? groups[key]
+      : Object.keys(groups[key]).reduce((acc, subKey) => {
+          acc[subKey] = groups[key][subKey];
+          return acc;
+        }, {})
+  }));
 }
 
-// similar to Array.findIndex but more efficient
+// Similar to Array.findIndex but more efficient
 // http://stackoverflow.com/q/1344500/713573
-function locationOf(element, array, start, end) {
-  start = start || 0;
-  end = end || array.length;
-  var pivot = parseInt(start + (end - start) / 2, 10);
+function locationOf(element, array, start = 0, end = array.length) {
+  const pivot = Math.floor(start + (end - start) / 2);
   if (end - start <= 1 || array[pivot] === element) return pivot;
   if (array[pivot] < element) {
     return locationOf(element, array, pivot, end);
