@@ -7,7 +7,8 @@
     "test": "mocha test/test.js",
     "build-debug": "browserify json-groupby.js --debug --standalone JSONGroupBy | exorcist dist/json-groupby.js.map > dist/json-groupby.js",
     "build-min": "browserify json-groupby.js --standalone JSONGroupBy | uglifyjs -c -m > dist/json-groupby.min.js",
-    "build": "npm run build-debug && npm run build-min"
+    "build": "npm run build-debug && npm run build-min",
+    "coverage": "nyc npm test"
   },
   "repository": {
     "type": "git",
@@ -33,6 +34,7 @@
     "chance": "^1.0.2",
     "exorcist": "^2.0.0",
     "mocha": "^10.3.0",
+    "nyc": "^17.1.0",
     "uglify-js": "^2.6.1"
   }
 }
